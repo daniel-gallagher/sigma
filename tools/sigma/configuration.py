@@ -93,7 +93,7 @@ class SigmaConfiguration:
                 if type(logsources) != dict:
                     raise SigmaConfigParseError("Logsources must be a map")
                 for name, logsource in logsources.items():
-                    self.logsources.append(SigmaLogsourceConfiguration(logsource, self.defaultindex, name, self.logsourcemerging, self.get_indexfield()))
+                    self.logsources.append(SigmaLogsourceConfiguration(logsource, self.defaultindex, name, self.logsourcemerging, self.get_indexfield(), self.get_fieldmapping))
 
     def get_indexfield(self):
         """Get index condition if index field name is configured"""
@@ -105,7 +105,7 @@ class SigmaLogsourceConfiguration:
     MM_AND = "and"  # Merge all conditions with AND
     MM_OR  = "or"   # Merge all conditions with OR
 
-    def __init__(self, logsource=None, defaultindex=None, name=None, mergemethod=MM_AND, indexfield=None):
+    def __init__(self, logsource=None, defaultindex=None, name=None, mergemethod=MM_AND, indexfield=None, get_fieldmapping=None):
         self.name = name
         self.indexfield = indexfield
         if logsource == None:               # create empty object
@@ -207,7 +207,7 @@ class SigmaLogsourceConfiguration:
                     raise SigmaConfigParseError("Logsource conditions must be a map")
                 cond = ConditionAND()
                 for key, value in logsource['conditions'].items():
-                    cond.add((key, value))
+                    cond.add((get_fieldmapping(key).resolve_fieldname(key), value))
                 self.conditions = cond
             else:
                 self.conditions = None
