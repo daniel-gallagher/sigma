@@ -18,23 +18,42 @@ import yaml
 from sigma.parser.condition import ConditionAND, ConditionOR
 from sigma.config.exceptions import SigmaConfigParseError
 from sigma.config.mapping import FieldMapping
+from .tools import deep_update_dict
 
 # Configuration
 class SigmaConfiguration:
     """Sigma converter configuration. Contains field mappings and logsource descriptions"""
-    def __init__(self, configyaml=None):
-        if configyaml == None:
-            self.config = None
-            self.fieldmappings = dict()
-            self.logsources = dict()
-            self.logsourcemerging = SigmaLogsourceConfiguration.MM_AND
-            self.defaultindex = None
+    def __init__(self, configyaml=None, baseconfig=None):
+        """
+        Initialize Sigma conversion configuration from parsed configuration 'configyaml'.
+        If baseconfig is given, the object will be initialized with this config and the configuration
+        contained in configyaml will be merged into it in the newly created object.
+        """
+        if baseconfig is not None:
+            self.configs = baseconfig.configs
+            if baseconfig.config is not None:
+                self.config = baseconfig.config.copy()
+            else:
+                self.config = dict()
+            self.fieldmappings = baseconfig.fieldmappings.copy()
+            self.logsourcemerging = baseconfig.logsourcemerging
+            self.defaultindex = baseconfig.defaultindex
+            self.logsources = list()
             self.backend = None
         else:
-            config = yaml.safe_load(configyaml)
-            self.config = config
-
+            self.configs = list()
+            self.config = dict()
             self.fieldmappings = dict()
+            self.logsourcemerging = SigmaLogsourceConfiguration.MM_AND
+            self.defaultindex = None
+            self.logsources = list()
+            self.backend = None
+
+        if configyaml is not None:
+            config = yaml.safe_load(configyaml)
+            self.configs.append(config)
+            deep_update_dict(self.config, config)
+
             try:
                 for source, target in config['fieldmappings'].items():
                     self.fieldmappings[source] = FieldMapping(source, target)
@@ -46,15 +65,12 @@ class SigmaConfiguration:
             try:
                 self.logsourcemerging = config['logsourcemerging']
             except KeyError:
-                self.logsourcemerging = SigmaLogsourceConfiguration.MM_AND
+                pass
 
             try:
                 self.defaultindex = config['defaultindex']
             except KeyError:
-                self.defaultindex = None
-
-            self.logsources = list()
-            self.backend = None
+                pass
 
     def get_fieldmapping(self, fieldname):
         """Return mapped fieldname if mapping defined or field name given in parameter value"""

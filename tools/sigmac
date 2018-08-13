@@ -83,7 +83,7 @@ Multiple log source specifications are AND linked.
         """)
 argparser.add_argument("--target", "-t", default="es-qs", choices=backends.getBackendDict().keys(), help="Output target format")
 argparser.add_argument("--target-list", "-l", action="store_true", help="List available output target formats")
-argparser.add_argument("--config", "-c", help="Configuration with field name and index mapping for target environment")
+argparser.add_argument("--config", "-c", action="append", help="Configurations with field name and index mapping for target environment. Multiple configurations are merged into one. Last config is authorative in case of conflicts.")
 argparser.add_argument("--output", "-o", default=None, help="Output file or filename prefix if multiple files are generated")
 argparser.add_argument("--backend-option", "-O", action="append", help="Options and switches that are passed to the backend")
 argparser.add_argument("--defer-abort", "-d", action="store_true", help="Don't abort on parse or conversion errors, proceed with next rule. The exit code from the last error is returned")
@@ -115,19 +115,19 @@ if cmdargs.filter:
 
 sigmaconfig = SigmaConfiguration()
 if cmdargs.config:
-    try:
-        conffile = cmdargs.config
-        f = open(conffile)
-        sigmaconfig = SigmaConfiguration(f)
-    except OSError as e:
-        print("Failed to open Sigma configuration file %s: %s" % (conffile, str(e)), file=sys.stderr)
-        exit(5)
-    except (yaml.parser.ParserError, yaml.scanner.ScannerError) as e:
-        print("Sigma configuration file %s is no valid YAML: %s" % (conffile, str(e)), file=sys.stderr)
-        exit(6)
-    except SigmaConfigParseError as e:
-        print("Sigma configuration parse error in %s: %s" % (conffile, str(e)), file=sys.stderr)
-        exit(7)
+    for conffile in cmdargs.config:
+        try:
+            f = open(conffile)
+            sigmaconfig = SigmaConfiguration(f, sigmaconfig)
+        except OSError as e:
+            print("Failed to open Sigma configuration file %s: %s" % (conffile, str(e)), file=sys.stderr)
+            exit(5)
+        except (yaml.parser.ParserError, yaml.scanner.ScannerError) as e:
+            print("Sigma configuration file %s is no valid YAML: %s" % (conffile, str(e)), file=sys.stderr)
+            exit(6)
+        except SigmaConfigParseError as e:
+            print("Sigma configuration parse error in %s: %s" % (conffile, str(e)), file=sys.stderr)
+            exit(7)
 
 backend_options = BackendOptions(cmdargs.backend_option)
 backend = backends.getBackend(cmdargs.target)(sigmaconfig, backend_options)

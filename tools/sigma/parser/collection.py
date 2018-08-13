@@ -16,6 +16,7 @@
 
 import yaml
 from .rule import SigmaParser
+from sigma.tools import deep_update_dict
 
 class SigmaCollectionParser:
     """
@@ -71,10 +72,3 @@ class SigmaCollectionParser:
 
     def __iter__(self):
         return iter([parser.parsedyaml for parser in self.parsers])
-
-def deep_update_dict(dest, src):
-    for key, value in src.items():
-        if isinstance(value, dict) and key in dest and isinstance(dest[key], dict):     # source is dict, destination key already exists and is dict: merge
-                deep_update_dict(dest[key], value)
-        else:
-            dest[key] = value
